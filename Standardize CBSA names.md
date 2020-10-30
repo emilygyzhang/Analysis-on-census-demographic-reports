@@ -430,8 +430,8 @@ match['StateMatchScore'] = [fuzz.partial_ratio(x,y) for (x,y) in zip(match['Stat
 match = match[match['StateMatchScore'] == 100].reset_index()
     # Keep observations with the highest partial match score of 'CBSA minue state' for each CBSA from ZHVI
 match['CBSAMatchScore'] = [fuzz.partial_ratio(x.split(", ")[0],y.split(", ")[0]) for (x,y) in zip(match['RegionName'],match['NAME'])]
-final_match = match.loc[match.groupby(['RegionName'])['CBSAMatchScore'].idxmax()][['RegionName','NAME','CBSAMatchScore']]
-final_match.head()
+match = match.loc[match.groupby(['RegionName'])['CBSAMatchScore'].idxmax()][['RegionName','NAME','CBSAMatchScore']]
+match.head()
 ```
 
 
@@ -500,7 +500,7 @@ final_match.head()
 
 ```python
 # Check obeservations where the standardized CBSA names are different from the CBSA names from ZHVI file and CBSAMatchScore isn't 100
-final_match[(final_match['RegionName'] != final_match['NAME']) & (final_match['CBSAMatchScore'] != 100)].sort_values(['CBSAMatchScore'],ascending = False)
+match[(match['RegionName'] != match['NAME']) & (match['CBSAMatchScore'] != 100)].sort_values(['CBSAMatchScore'],ascending = False)
 ```
 
 
@@ -666,13 +666,23 @@ final_match[(final_match['RegionName'] != final_match['NAME']) & (final_match['C
 ```python
 # Based on the result above, I decided to only consider matches with CBSAMatchScore>90
 threshold = 90
-final_match['CBSA'] = [x if y>threshold else z for (x,y,z) in zip(final_match['NAME'],final_match['CBSAMatchScore'],final_match['RegionName'])]
+match['CBSA'] = [x if y>threshold else z for (x,y,z) in zip(match['NAME'],match['CBSAMatchScore'],match['RegionName'])]
 ```
 
 
 ```python
-final_match.drop(['NAME','CBSAMatchScore'],axis = 1,inplace = True)
-final_match.head()
+# For cases where multiple CBSA names from the ZHVI file match to the same CBSA names from the US Census Bureau, 
+# keep the original CBSA names from the ZHVI file
+dup_count = pd.DataFrame(match.groupby(['CBSA'])['RegionName'].count())
+dup_count.columns = ['RegionCount']
+match = match.merge(dup_count,how = 'left',left_on = 'CBSA',right_on='CBSA')
+match['CBSA'] = [x if y>1 else z for (x,y,z) in zip(match['RegionName'],match['RegionCount'],match['CBSA'])]
+```
+
+
+```python
+final_match = match.drop(['NAME','CBSAMatchScore','RegionCount'],axis = 1)
+final_match
 ```
 
 
@@ -702,33 +712,78 @@ final_match.head()
   </thead>
   <tbody>
     <tr>
-      <th>19933</th>
+      <th>0</th>
       <td>Aberdeen, SD</td>
       <td>Aberdeen, SD</td>
     </tr>
     <tr>
-      <th>13422</th>
+      <th>1</th>
       <td>Aberdeen, WA</td>
       <td>Aberdeen, WA</td>
     </tr>
     <tr>
-      <th>7049</th>
+      <th>2</th>
       <td>Abilene, TX</td>
       <td>Abilene, TX</td>
     </tr>
     <tr>
-      <th>21152</th>
+      <th>3</th>
       <td>Ada, OK</td>
       <td>Ada, OK</td>
     </tr>
     <tr>
-      <th>10866</th>
+      <th>4</th>
       <td>Adrian, MI</td>
       <td>Adrian, MI</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>908</th>
+      <td>Youngstown, OH</td>
+      <td>Youngstown, OH</td>
+    </tr>
+    <tr>
+      <th>909</th>
+      <td>Yuba City, CA</td>
+      <td>Yuba City, CA</td>
+    </tr>
+    <tr>
+      <th>910</th>
+      <td>Yuma, AZ</td>
+      <td>Yuma, AZ</td>
+    </tr>
+    <tr>
+      <th>911</th>
+      <td>Zanesville, OH</td>
+      <td>Zanesville, OH</td>
+    </tr>
+    <tr>
+      <th>912</th>
+      <td>Zapata, TX</td>
+      <td>Zapata, TX</td>
     </tr>
   </tbody>
 </table>
+<p>913 rows × 2 columns</p>
 </div>
+
+
+
+
+```python
+# Make sure that no CBSA names from the US Census Bureau is assigned to multiple CBSAs from the ZHVI file
+(final_match.groupby('CBSA').count()>2).any()
+```
+
+
+
+
+    RegionName    False
+    dtype: bool
 
 
 
@@ -840,7 +895,7 @@ df_s.head()
       <td>489670.0</td>
       <td>492875.0</td>
       <td>497090.0</td>
-      <td>New York-Newark-Jersey City, NY-NJ-PA</td>
+      <td>New York, NY</td>
     </tr>
     <tr>
       <th>2</th>
