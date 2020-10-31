@@ -264,7 +264,7 @@ cbsa.head()
 
 
 <a id=step2></a>
-#### Step 2: Create A Cross-Walk File to Standardize CBSA Nmaes
+#### Step 2: Create A Cross-Walk File to Standardize CBSA Names
 Some CBSA names in the ZHVI file cannot be recognized by Tableau and they need to be converted to the standardized CBSA names reported by the US Census Bureau so that Tableau can correctly map them
 <br><br>
 [Go back](#maincontent)
